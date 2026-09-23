@@ -95,5 +95,7 @@ API SHAPE (suggested)
 
    JSON EXAMPLE:
 
-   wrapped:   {"type": "snapshot", "tick": 1, "state": {"version": 1, "tick": 1, "money": 1001}}
-   raw/unwrapped: ('snapshot', {'tick': 1, 'state': {'version': 1, 'tick': 1, 'money': 1001}})   
+   wrapped:   {"type": "command", "values": {"item 1": "value 1", "item 2": "value 2", "item 3": "value 3"}} THIS IS A NESTED DICT.
+   Format: {typeDict{}, valuesDict{}}
+   raw/unwrapped: ('command', {'values': {'item 1': 'value 1', 'item 2': 'value 2', 'item 3': 'value 3'}})   THIS IS A TUPLE
+   Format: (string, valuesDict{})
