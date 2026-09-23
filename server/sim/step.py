@@ -8,7 +8,7 @@ INCOME_PER_TICK = 1  # credits per tick; placeholder until balance moves to data
 
 
 def step(state: GameState, commands: list[dict]) -> tuple[GameState, list[dict]]:
-    results = [
+    """results = [
         {"id": cmd.get("id"), "ok": False, "reason": "UNKNOWN_COMMAND"}
         for cmd in commands
     ]
@@ -18,4 +18,6 @@ def step(state: GameState, commands: list[dict]) -> tuple[GameState, list[dict]]
         tick=state.tick + 1,
         money=state.money + INCOME_PER_TICK,
     )
-    return new_state, results
+    return new_state, results"""
+
+    return state, state.update()
