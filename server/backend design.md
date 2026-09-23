@@ -85,10 +85,15 @@ API SHAPE (suggested)
 
 ======
 
- REALTIME PROTOCOL
+* REALTIME PROTOCOL
    Each  JSON begins with a 'type' field which can be as follows:
        'command':
        'command_result':
        'event':
        'snapshot':
        TBC
+
+   JSON EXAMPLE:
+
+   wrapped:   {"type": "snapshot", "tick": 1, "state": {"version": 1, "tick": 1, "money": 1001}}
+   raw/unwrapped: ('snapshot', {'tick': 1, 'state': {'version': 1, 'tick': 1, 'money': 1001}})   
