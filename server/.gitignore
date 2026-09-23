@@ -1,0 +1,20 @@
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# Python bytecode & cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# UV local state & cache
+.uv/
+
+# Distribution & build outputs
+dist/
+build/
+*.egg-info/
+
+# Environment files containing secrets
+.env

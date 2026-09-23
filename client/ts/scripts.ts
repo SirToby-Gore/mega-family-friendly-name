@@ -8,8 +8,25 @@ class MegaFamilyFriendlyNameClient {
 	private socket!: WebSocket;
 
 	// UI Cache references
+	private root: HTMLElement = document.createElement('div');
+	private shopRoot: HTMLDivElement = document.createElement('div');
+	private shopBody: HTMLDetailsElement = document.createElement('details');
+	private dataCenterRoot: HTMLDivElement = document.createElement('div');
+	private statsRoot: HTMLDivElement = document.createElement('div');
 
-	constructor() {}
+	constructor() {
+		document.body.innerHTML = '';
+
+		document.body.append(this.root);
+
+		this.root.appendChild(this.shopRoot);
+		this.root.appendChild(this.dataCenterRoot);
+		this.root.appendChild(this.statsRoot);
+
+		this.shopRoot.appendChild(this.shopBody);
+
+		this.connectToServer();
+	}
 
 	private connectToServer(): void {
 		const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -43,14 +60,9 @@ class MegaFamilyFriendlyNameClient {
 		);
 	}
 
-	/// todo: change me
-	private joinGame(): void {
-		const input = document.getElementById('username-input') as HTMLInputElement;
-		const name = input.value.trim();
-		this.sendToServer('join-game', { name });
-	}
-
 	private handleServerMessage(res: ServerResponse): void {
+		console.log(res);
+		
 		if (res['status-code'] >= 400) {
 			alert(res.message || 'An error occurred on the server.');
 			return;
@@ -63,13 +75,6 @@ class MegaFamilyFriendlyNameClient {
 		}
 	}
 }
-
-// Global window event safely preventing disconnect alerts
-window.addEventListener('beforeunload', (event) => {
-	event.preventDefault();
-	event.returnValue = 'Are you sure you want to leave the game session?';
-	return event.returnValue;
-});
 
 // Helper function to safely parse server-side layout variables
 function jsonDecode(data: string): any {

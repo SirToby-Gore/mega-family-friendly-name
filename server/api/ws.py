@@ -28,8 +28,7 @@ async def broadcast(raw: str) -> None:
             clients.discard(ws)   # a dead client must not stop the loop
 
 
-async def game_loop() -> None:
-    global state
+async def game_loop(state) -> None:
     while True:
         await asyncio.sleep(TICK_SECONDS)
         commands = pending.copy()
@@ -44,7 +43,8 @@ async def game_loop() -> None:
 async def ws_endpoint(ws: WebSocket) -> None:
     await ws.accept()
     clients.add(ws)
-    await ws.send_text(snapshot_message())   # new/reconnecting clients catch up immediately
+    # new/reconnecting clients catch up immediately
+    await ws.send_text(snapshot_message())
     try:
         while True:
             raw = await ws.receive_text()
