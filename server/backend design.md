@@ -1,37 +1,36 @@
-BACKEND DESIGN RULES - Data Center Tycoon (demo)
-=================================================
+# BACKEND DESIGN RULES - Data Center Tycoon (demo)
 
 1. THE SERVER OWNS THE TRUTH
    The Python server holds the only real game state. The TypeScript client
-   draws what the server says and sends *intents* ("build rack at 3,4"),
+   draws what the server says and sends _intents_ ("build rack at 3,4"),
    never results ("money is now 900"). The client may animate or predict,
    but the server's snapshot always wins.
 
 2. THE SIMULATION RUNS ON A FIXED TICK
    Game time moves in fixed steps (e.g. 1 tick = 1 in-game second), not per
    HTTP request and not by wall clock inside game logic. The core is one
-   function:  step(state, commands) -> new state.
+   function: step(state, commands) -> new state.
    Same state + same commands = same result. That makes bugs reproducible
    and lets us fast-forward, pause, and test.
 
 3. LAYERS ONLY CALL DOWNWARD
-      api/       HTTP/WebSocket routes: parse, validate, call a command
-      commands/  player actions: build, upgrade, sell, hire, set_price
-      sim/       tick logic: power, heat, uptime, revenue, events
-      models/    plain data classes for state (no logic, no I/O)
+   api/ HTTP/WebSocket routes: parse, validate, call a command
+   commands/ player actions: build, upgrade, sell, hire, set_price
+   sim/ tick logic: power, heat, uptime, revenue, events
+   models/ plain data classes for state (no logic, no I/O)
    sim/ and models/ must not import the web framework, files, or network.
 
 4. BALANCE LIVES IN DATA, NOT CODE
    Costs, power draw, heat output, capacity, and upgrade trees for racks,
    servers, cooling, and generators (aka any item) go in config files (e.g.
-   server/data/*.json). Designers tune numbers without touching Python.
+   server/data/\*.json). Designers tune numbers without touching Python.
    No magic numbers in sim code.
 
 5. MONEY AND UNITS ARE EXPLICIT
    Money is stored as integers (whole cents or whole credits) - never
    floats. Name fields with units: power_kw, heat_btu, temp_c,
    bandwidth_gbps. Every resource flow (power, cooling, cash) must balance
-   each tick, so we can show the player *why* a number changed.
+   each tick, so we can show the player _why_ a number changed.
 
 6. COMMANDS VALIDATE, THEN APPLY - OR REJECT CLEANLY
    Each command checks all rules first (enough money? tile free? power
@@ -54,6 +53,8 @@ BACKEND DESIGN RULES - Data Center Tycoon (demo)
    just a thin wrapper.
 
 API SHAPE (suggested)
+
+```
    GET  /state            -> full snapshot
    POST /command          -> {
 				"type": "...",
@@ -62,3 +63,16 @@ API SHAPE (suggested)
 			     }
    POST /tick?n=1         -> advance time (or run ticks on a server loop and
                              push snapshots over a WebSocket)
+```
+
+### Stacky mc stackface
+
+- server run logic
+- new state is created
+- new state is encoded into json
+- json is stirngified
+- json is wrapped in a WS handler
+- WS is sent
+- client receives
+- unwraps, decodes, json
+- handles game logic client side
