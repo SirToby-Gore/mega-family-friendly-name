@@ -99,3 +99,5 @@ API SHAPE (suggested)
    Format: {typeDict{}, valuesDict{}}
    raw/unwrapped: ('command', {'values': {'item 1': 'value 1', 'item 2': 'value 2', 'item 3': 'value 3'}})   THIS IS A TUPLE
    Format: (string, valuesDict{})
+
+   
