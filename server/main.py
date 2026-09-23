@@ -6,6 +6,19 @@ import sim
 import models
 import api
 from enum import Enum
+from contextlib import asynccontextmanager
+from fastapi import FastAPI
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    task = asyncio.create_task(game_loop())   # start ticking when the server starts
+    yield
+    task.cancel()                             # stop ticking on shutdown
+
+
+app = FastAPI(lifespan=lifespan)
+app.include_router(router)
 
 
 class CardRarity(Enum):
@@ -62,4 +75,3 @@ too low power reliability - global blackout
 too many requesst - short circuit
 emissions too high - world submerged
 """
->>>>>>> 22d413010bd8351cb7429cf9aa7d24e1f24c2d5c
