@@ -18,7 +18,7 @@ def wrap(msg_type: str, payload: dict) -> str:
         raise ProtocolError(f"Unknown message type: {msg_type!r}")
     if "type" in payload:
         raise ProtocolError("Payload must not contain its own 'type' field")
-    return json.dumps({"type": msg_type, **payload})
+    return json.dumps({"type": msg_type, "values": {**payload}})
 
 
 def unwrap(raw: str) -> tuple[str, dict]:
@@ -39,6 +39,10 @@ def unwrap(raw: str) -> tuple[str, dict]:
 
 if __name__ == "__main__":
     # Quick demo: python -m api.protocol  (run from server/)
-    raw = wrap("snapshot", {"tick": 1, "state": {"version": 1, "tick": 1, "money": 1001}})
+    """raw = wrap("snapshot", {"tick": 1, "state": {"version": 1, "tick": 1, "money": 1001}})
+    print("wrapped:  ", raw)
+    print("unwrapped:", unwrap(raw))"""
+
+    raw = wrap("command", {"energy": "value 1", "item 2": "value 2", "item 3": "value 3"})
     print("wrapped:  ", raw)
     print("unwrapped:", unwrap(raw))
