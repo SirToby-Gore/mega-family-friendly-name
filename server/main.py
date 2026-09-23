@@ -1,13 +1,9 @@
 import asyncio
-import aiofiles
-import asyncio
-import websockets
-import sim
-import models
-import api
-from enum import Enum
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
+
+from api.ws import game_loop, router
 
 
 @asynccontextmanager
