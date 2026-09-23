@@ -55,6 +55,12 @@ app.mount("/css", StaticFiles(directory=os.path.join(BASE_DIR,
 app.mount(
     "/assets", StaticFiles(directory=os.path.join(BASE_DIR, "assets")), name="assets")
 
+
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    return Response(status_code=204)  # No content
+
+
 @app.get("/")
 async def serve_index():
     return FileResponse(os.path.join(BASE_DIR, "client", "index.html"))

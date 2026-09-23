@@ -31,7 +31,7 @@ class MegaFamilyFriendlyNameClient {
 	private connectToServer(): void {
 		const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
 
-		this.socket = new WebSocket(`${protocol}//${window.location.host}`);
+		this.socket = new WebSocket(`${protocol}//${window.location.host}/ws`);
 
 		this.socket.onopen = () => {
 			console.info('Pipeline connected directly to the unified server wrapper!');
