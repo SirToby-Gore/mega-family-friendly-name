@@ -1,5 +1,6 @@
 import asyncio
 from contextlib import asynccontextmanager
+from enum import Enum
 
 from fastapi import FastAPI
 
