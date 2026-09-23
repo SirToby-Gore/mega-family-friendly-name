@@ -76,3 +76,12 @@ API SHAPE (suggested)
 - client receives
 - unwraps, decodes, json
 - handles game logic client side
+======
+
+ REALTIME PROTOCOL
+   Each  JSON begins with a 'type' field which can be as follows:
+       'command':
+       'command_result':
+       'event':
+       'snapshot':
+       TBC
