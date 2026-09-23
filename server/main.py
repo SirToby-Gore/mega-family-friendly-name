@@ -2,7 +2,7 @@ import asyncio
 # import aiofiles
 import asyncio
 import websockets
-from server.models.game import GameState
+from models.game import GameState
 import sim
 from api.protocol import ProtocolError, unwrap, wrap
 import random
