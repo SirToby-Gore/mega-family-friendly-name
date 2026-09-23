@@ -10,13 +10,25 @@ var __assign = (this && this.__assign) || function () {
     return __assign.apply(this, arguments);
 };
 var MegaFamilyFriendlyNameClient = /** @class */ (function () {
-    // UI Cache references
     function MegaFamilyFriendlyNameClient() {
+        // UI Cache references
+        this.root = document.createElement('div');
+        this.shopRoot = document.createElement('div');
+        this.shopBody = document.createElement('details');
+        this.dataCenterRoot = document.createElement('div');
+        this.statsRoot = document.createElement('div');
+        document.body.innerHTML = '';
+        document.body.append(this.root);
+        this.root.appendChild(this.shopRoot);
+        this.root.appendChild(this.dataCenterRoot);
+        this.root.appendChild(this.statsRoot);
+        this.shopRoot.appendChild(this.shopBody);
+        this.connectToServer();
     }
     MegaFamilyFriendlyNameClient.prototype.connectToServer = function () {
         var _this = this;
         var protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        this.socket = new WebSocket("".concat(protocol, "//").concat(window.location.host));
+        this.socket = new WebSocket("".concat(protocol, "//").concat(window.location.host, "/ws"));
         this.socket.onopen = function () {
             console.info('Pipeline connected directly to the unified server wrapper!');
         };
@@ -37,13 +49,8 @@ var MegaFamilyFriendlyNameClient = /** @class */ (function () {
         if (payload === void 0) { payload = {}; }
         this.socket.send(JSON.stringify(__assign({ request: request }, payload)));
     };
-    /// todo: change me
-    MegaFamilyFriendlyNameClient.prototype.joinGame = function () {
-        var input = document.getElementById('username-input');
-        var name = input.value.trim();
-        this.sendToServer('join-game', { name: name });
-    };
     MegaFamilyFriendlyNameClient.prototype.handleServerMessage = function (res) {
+        console.log(res);
         if (res['status-code'] >= 400) {
             alert(res.message || 'An error occurred on the server.');
             return;
@@ -55,12 +62,6 @@ var MegaFamilyFriendlyNameClient = /** @class */ (function () {
     };
     return MegaFamilyFriendlyNameClient;
 }());
-// Global window event safely preventing disconnect alerts
-window.addEventListener('beforeunload', function (event) {
-    event.preventDefault();
-    event.returnValue = 'Are you sure you want to leave the game session?';
-    return event.returnValue;
-});
 // Helper function to safely parse server-side layout variables
 function jsonDecode(data) {
     return JSON.parse(data);
