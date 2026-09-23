@@ -31,10 +31,13 @@ def unwrap(raw: str) -> tuple[str, dict]:
     if not isinstance(message, dict):
         raise ProtocolError("Message must be a JSON object")
 
-    msg_type = message.pop("type", None)
+    msg_type = message.get("type")
     if msg_type not in MESSAGE_TYPES:
         raise ProtocolError(f"Unknown message type: {msg_type!r}")
-    return msg_type, message
+    values = message.get("values", {})
+    if not isinstance(values, dict):
+        raise ProtocolError("'values' must be a JSON object")
+    return msg_type, values
 
 
 if __name__ == "__main__":
