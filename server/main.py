@@ -1,7 +1,8 @@
 import asyncio
-#import aiofiles
+# import aiofiles
 import asyncio
 import websockets
+from server.models.game import GameState
 import sim
 from api.protocol import ProtocolError, unwrap, wrap
 import random
@@ -19,7 +20,7 @@ from api.ws import game_loop, router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    task = asyncio.create_task(game_loop())   # start ticking when the server starts
+    task = asyncio.create_task(game_loop(GameData()))   # start ticking when the server starts
     yield
     task.cancel()                             # stop ticking on shutdown
 
@@ -56,28 +57,78 @@ class ElectricCard(Card):
 
 new_card = Card("Card Name", "Card Description",
                 CardRarity.COMMON, "card_sprite.png")
-print(new_card)
 
 
-"""
-calendar
-energy consumption per hit
-total water
-money
-requests
-population_satisfaction
-energy_generation_rate
-water_consumption_rate per hit
-power_reliability 1 in x chance per tick of power outage
-size (influence on population satisfaction)
-emissions (influencve on population satisfaction and water)
 
-LOSS CONDITIONS:
-negative money - out of buisness
-too low water - burn down/YOU die of thirst
-too much water - worldwide drought 
-too low population satisfaction - pitchforj riot
-too low power reliability - global blackout
-too many requesst - short circuit
-emissions too high - world submerged
-"""
+
+class GameData:
+    def __init__(self):
+        self.day: int = 0
+        self.money: float = 1000.0
+        self.water: float = 100.0
+        self.energy: float = 100.0
+        self.requests: float = 1.0
+        self.population_satisfaction: float = 100.0
+        self.energy_generation_rate: float = 1.0
+        self.water_consumption_rate: float = 1.0
+        self.water_collection_rate: float = 1.0
+        self.power_reliability: float = 1.0
+        self.size: int = 1
+        self.emissions: float = 0.0
+        self.defeat: bool = False
+
+    async def update(self) -> list[dict]:
+        self.day += 1
+        self.money += math.floor(self.requests * 1.1)
+        self.requests *= 1.01
+        self.energy += self.energy_generation_rate - self.energy_consumption_rate
+        self.water += self.water_collection_rate - self.water_consumption_rate - self.emissions
+        self.population_satisfaction += self.requests - self.emissions - self.water_consumption_rate - self.size
+        self.energy_consumption_rate += self.requests
+        self.water_consumption_rate += self.requests
+        self.power_reliability -= self.energy_consumption_rate * 1.01
+
+        data: dict = {
+            "day": self.day,
+            "money": self.money,
+            "water": self.water,
+            "energy": self.energy,
+            "requests": self.requests,
+            "population_satisfaction": self.population_satisfaction,
+            "energy_generation_rate": self.energy_generation_rate,
+            "water_consumption_rate": self.water_consumption_rate,
+            "water_collection_rate": self.water_collection_rate,
+            "power_reliability": self.power_reliability,
+            "size": self.size,
+            "emissions": self.emissions,
+            "defeat": self.defeat
+        }
+
+        return [wrap("command", data)]
+
+
+    async def game_loop(self):
+        while True:
+            await self.update()
+            await asyncio.sleep(1)
+
+
+
+
+
+
+
+'''    def step(state: GameState, commands: list[dict]) -> tuple[GameState, list[dict]]:
+    """results = [
+        {"id": cmd.get("id"), "ok": False, "reason": "UNKNOWN_COMMAND"}
+        for cmd in commands
+    ]
+
+    new_state = replace(
+        state,
+        tick=state.tick + 1,
+        money=state.money + INCOME_PER_TICK,
+    )
+    return new_state, results"""
+
+    return state, state.update()'''
