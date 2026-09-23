@@ -28,9 +28,9 @@
 
 5. MONEY AND UNITS ARE EXPLICIT
    Money is stored as integers (whole cents or whole credits) - never
-   floats. Name fields with units: power_kw, heat_btu, temp_c,
+   floats. Name fields with units: power*kw, heat_btu, temp_c,
    bandwidth_gbps. Every resource flow (power, cooling, cash) must balance
-   each tick, so we can show the player _why_ a number changed.
+   each tick, so we can show the player \_why* a number changed.
 
 6. COMMANDS VALIDATE, THEN APPLY - OR REJECT CLEANLY
    Each command checks all rules first (enough money? tile free? power
@@ -76,3 +76,9 @@ API SHAPE (suggested)
 - client receives
 - unwraps, decodes, json
 - handles game logic client side
+
+### Rules for commits
+
+- modular code e.g. all the shop logic goes in the `shop.py` file
+- one file per commit
+- only one person to edit a file at a time
