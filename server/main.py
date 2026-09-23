@@ -1,5 +1,5 @@
 import asyncio
-import aiofiles
+#import aiofiles
 import asyncio
 import websockets
 import sim
@@ -81,4 +81,3 @@ too low power reliability - global blackout
 too many requesst - short circuit
 emissions too high - world submerged
 """
->>>>>>> 22d413010bd8351cb7429cf9aa7d24e1f24c2d5c
