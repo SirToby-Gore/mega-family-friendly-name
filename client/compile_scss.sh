@@ -1,3 +1,3 @@
 #!/bin/bash
 
-sass --watch scss:css
+sass scss/styles.scss css/styles.css --no-source-map --watch

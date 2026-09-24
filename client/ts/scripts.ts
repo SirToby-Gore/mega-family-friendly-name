@@ -1,12 +1,33 @@
+interface GameState {
+	tick: number;
+	day: number;
+	money: number;
+	water: number;
+	energy: number;
+	requests: number;
+	population_satisfaction: number;
+	energy_generation_rate: number;
+	energy_consumption_rate: number;
+	water_consumption_rate: number;
+	water_collection_rate: number;
+	power_reliability: number;
+	size: number;
+	emissions: number;
+	defeat: boolean;
+	upgrades?: Record<string, any>;
+}
+
 interface ServerResponse {
 	type: string;
-	state: Map<string, any>;
-	'status-code': number;
+	values?: {
+		state?: {
+			version: number;
+			state: GameState;
+		};
+	};
 }
 
 class ShopUpgrade {
-	private app: MegaFamilyFriendlyNameClient;
-
 	private routeElement: HTMLDivElement;
 	private levelIndicator: HTMLDivElement = document.createElement('div');
 	private buttonContainer: HTMLDivElement = document.createElement('div');
@@ -16,9 +37,7 @@ class ShopUpgrade {
 	private level: number = 0;
 	static maxLevel: number = 10;
 
-	constructor(app: MegaFamilyFriendlyNameClient, routeElement: HTMLDivElement, name: string) {
-		this.app = app;
-
+	constructor(routeElement: HTMLDivElement, name: string) {
 		this.routeElement = routeElement;
 		this.name = name;
 
@@ -31,127 +50,148 @@ class ShopUpgrade {
 		this.buttonContainer.classList.add('button-container');
 
 		this.buttonContainer.appendChild(this.buyNewLevelButton);
-		this.buttonContainer.classList.add('new-level-button');
+		this.buyNewLevelButton.classList.add('new-level-button');
+		this.buyNewLevelButton.innerText = `Upgrade ${this.name}`;
 		this.buyNewLevelButton.onclick = this.buyNewLevel;
 
 		for (let i = 0; i < ShopUpgrade.maxLevel; i++) {
 			const newCell = document.createElement('div');
 			newCell.classList.add('cell');
-
 			this.levelIndicator.appendChild(newCell);
 		}
 	}
 
-	buyNewLevel(event: Event) {
-		console.log('Buying new level...');
+	buyNewLevel = (event: Event) => {
+		console.log(`Buying new level for ${this.name}...`);
+	};
+
+	setLevel(level: number) {
+		this.level = Math.min(level, ShopUpgrade.maxLevel);
+		this.updateChildren();
 	}
 
 	updateChildren() {
-		let i = this.level;
-
-		for (const cell of this.levelIndicator.children) {
-			if (i <= 0) {
-				break;
+		const cells = Array.from(this.levelIndicator.children);
+		cells.forEach((cell, index) => {
+			if (index < this.level) {
+				cell.classList.add('active');
+			} else {
+				cell.classList.remove('active');
 			}
-
-			cell.classList.add('active');
-		}
+		});
 	}
 }
 
 class MegaFamilyFriendlyNameClient {
 	private socket!: WebSocket;
 
-	// UI Cache references
 	private root: HTMLElement = document.createElement('div');
-
+	private statsRoot: HTMLDivElement = document.createElement('div');
 	private shopRoot: HTMLDivElement = document.createElement('div');
 	private shopBody: HTMLDetailsElement = document.createElement('details');
-	private shopUpgrades: Array<ShopUpgrade> = [];
-
+	private shopSummary: HTMLElement = document.createElement('summary');
+	private shopUpgrades: Record<string, ShopUpgrade> = {};
 	private dataCenterRoot: HTMLDivElement = document.createElement('div');
 
-	private statsRoot: HTMLDivElement = document.createElement('div');
+	private messageHandlers: Record<string, (res: ServerResponse) => void> = {};
 
 	constructor() {
 		document.body.innerHTML = '';
-
 		document.body.append(this.root);
+
+		this.root.appendChild(this.statsRoot);
+		this.statsRoot.classList.add('stats');
 
 		this.root.appendChild(this.shopRoot);
 		this.shopRoot.classList.add('shop');
 
+		this.shopSummary.innerText = 'Shop Upgrades';
+		this.shopBody.appendChild(this.shopSummary);
 		this.shopRoot.appendChild(this.shopBody);
 		this.shopBody.classList.add('shop-body');
 
 		this.root.appendChild(this.dataCenterRoot);
 		this.dataCenterRoot.classList.add('data-center-root');
 
-		this.root.appendChild(this.statsRoot);
-		this.statsRoot.classList.add('stats');
-
+		this.registerHandlers();
 		this.connectToServer();
+	}
+
+	private registerHandlers(): void {
+		this.messageHandlers = {
+			snapshot: this.handleSnapshot,
+			error: this.handleServerError,
+			card_spawned: this.handleCardSpawned,
+		};
+	}
+
+	private handleSnapshot = (res: ServerResponse): void => {
+		const stateData = res.values?.state?.state;
+		if (!stateData) return;
+
+		this.statsRoot.innerHTML = `
+            <div><strong>Day:</strong> ${stateData.day}</div>
+            <div><strong>Money:</strong> $${(stateData.money / 100).toFixed(2)}</div>
+            <div><strong>Water:</strong> ${stateData.water.toFixed(1)} (${stateData.water_collection_rate.toFixed(2)} in / ${stateData.water_consumption_rate.toFixed(2)} out)</div>
+            <div><strong>Energy:</strong> ${stateData.energy.toFixed(1)} (${stateData.energy_generation_rate.toFixed(2)} in / ${stateData.energy_consumption_rate.toFixed(2)} out)</div>
+            <div><strong>Satisfaction:</strong> ${stateData.population_satisfaction.toFixed(1)}%</div>
+            <div><strong>Reliability:</strong> ${stateData.power_reliability.toFixed(1)}%</div>
+        `;
+
+		if (stateData.upgrades) {
+			this.shopBody.open = true;
+
+			for (const [key, upgradeData] of Object.entries(stateData.upgrades)) {
+				if (!this.shopUpgrades[key]) {
+					const upgradeDiv = document.createElement('div');
+					this.shopBody.appendChild(upgradeDiv);
+					this.shopUpgrades[key] = new ShopUpgrade(upgradeDiv, upgradeData.name || key);
+				}
+				this.shopUpgrades[key].setLevel(upgradeData.level || 0);
+			}
+		}
+	};
+
+	private handleServerError = (res: ServerResponse): void => {
+		console.error('Server Error:', res);
+	};
+
+	private handleCardSpawned = (res: ServerResponse): void => {
+		console.log('Card Spawn Event:', res);
+	};
+
+	public registerHandler(type: string, handler: (res: ServerResponse) => void): void {
+		this.messageHandlers[type] = handler;
 	}
 
 	private connectToServer(): void {
 		const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-
 		this.socket = new WebSocket(`${protocol}//${window.location.host}/ws`);
-
-		this.socket.onopen = () => {
-			console.info('Pipeline connected directly to the unified server wrapper!');
-		};
 
 		this.socket.onmessage = (event) => {
 			try {
-				const response: ServerResponse = jsonDecode(event.data);
-				response['status-code'] = 200;
+				const response: ServerResponse = JSON.parse(event.data);
 				this.handleServerMessage(response);
 			} catch (err) {
 				console.error('Failed to parse incoming transmission:', err);
 			}
 		};
-
-		this.socket.onclose = () => {
-			console.error('Pipeline disconnected');
-		};
 	}
 
 	private sendToServer(request: string, payload: Record<string, any> = {}): void {
-		this.socket.send(
-			JSON.stringify({
-				request,
-				...payload,
-			}),
-		);
+		if (this.socket.readyState === WebSocket.OPEN) {
+			this.socket.send(JSON.stringify({ request, ...payload }));
+		}
 	}
 
 	private handleServerMessage(res: ServerResponse): void {
-		console.table(res);
-
-		if (res['status-code'] >= 400) {
-			alert(res.type || 'An error occurred on the server.');
-			return;
-		}
-
-		switch (
-			res.type
-			// todo: put methods here
-		) {
+		const handler = this.messageHandlers[res.type];
+		if (handler) {
+			handler(res);
 		}
 	}
 }
 
-// Helper function to safely parse server-side layout variables
-function jsonDecode(data: string): any {
-	return JSON.parse(data);
-}
-
-function jsonEncode(data: any): string {
-	return JSON.stringify(data);
-}
-
-// Fire up client core runtime
 document.addEventListener('DOMContentLoaded', () => {
 	new MegaFamilyFriendlyNameClient();
 });
