@@ -5,6 +5,8 @@ from protocol import ProtocolError, wrap, unwrap
 import game
 from game import GameState, GameData, new_game, energy_upgrade, water_upgrade, size_upgrade
 
+import json
+
 # inside game_loop:
 TICK_SECONDS = 1.0
 
@@ -52,6 +54,8 @@ async def ws_endpoint(ws: WebSocket) -> None:
             raw = await ws.receive_text()
             try:
                 msg_type, payload = unwrap(raw)
+                ans = state.data.receive(msg_type, payload)
+                ws.send_text(json.dumps(ans))
             except ProtocolError:
                 continue                     # ignore malformed messages
             if msg_type == "command":
