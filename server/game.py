@@ -3,6 +3,10 @@ from enum import Enum
 import math
 import random
 from typing import Callable, Any
+import string
+import rich_stdout
+
+terminal = rich_stdout.Terminal()
 
 STATE_VERSION = 1
 
@@ -15,11 +19,12 @@ class CardRarity(Enum):
 
 
 class Card:
-    def __init__(self, name: str, description: str, rarity: CardRarity, effect: Callable[[Any], None]):
+    def __init__(self, name: str, description: str, rarity: CardRarity, effect: Callable[[Any], None], id: str = ''):
         self.name: str = name
         self.description: str = description
         self.rarity: CardRarity = rarity
         self.effect: Callable[[GameData], None] = effect
+        self.id: str = id
 
     def __str__(self) -> str:
         return f"{self.name}: {self.description} (Rarity: {self.rarity.value})"
@@ -28,17 +33,22 @@ class Card:
     def spawn():
         random_number = random.randint(1, 100)
         if random_number <= 60:
-            pos = random.randint(0, len(common_cards) - 1)
-            return common_cards[pos]
+            return random.choice(common_cards)
         elif random_number <= 90:
-            pos = random.randint(0, len(uncommon_cards) - 1)
-            return uncommon_cards[pos]
+            return random.choice(uncommon_cards)
         elif random_number <= 99:
-            pos = random.randint(0, len(rare_cards) - 1)
-            return rare_cards[pos]
+            return random.choice(rare_cards)
         else:
-            pos = random.randint(0, len(legendary_cards) - 1)
-            return legendary_cards[pos]
+            return random.choice(legendary_cards)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "name": self.name,
+            "description": self.description,
+            "rarity": self.rarity.value,
+            # "effect": self.effect,
+            "id": self.id
+        }
 
 
 class GameData:
@@ -58,6 +68,7 @@ class GameData:
         self.power_reliability: float = 100.0
         self.size: int = 1
         self.level_cap = self.size*10
+        self.reason = str = ""
         self.emissions: float = 0.0
         self.defeat: bool = False
         self.energy_upgrade = Upgrade(name="Power Plant", description="Increases energy generation rate by 5%.",
@@ -66,6 +77,7 @@ class GameData:
                                      cost=5000, effect=increase_water_collection)
         self.size_upgrade = Upgrade(name="Size", description="Increases the size of your settlement by 1.",
                                     cost=10000, effect=increase_size)
+        self.cards: dict[str, Card] = {}
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -88,38 +100,49 @@ class GameData:
             "reason": self.reason,
             "energy-generation-level": self.energy_upgrade.level,
             "water-collection-level": self.water_upgrade.level,
-            "level-cap": self.level_cap
+            "level-cap": self.level_cap,
+            "next-energy-upgrade-cost": (self.energy_upgrade.level + 1) * 1.2 * self.energy_upgrade.upgrade_cost,
+            "next-water-upgrade-cost": (self.water_upgrade.level + 1) * 1.2 * self.water_upgrade.upgrade_cost,
+            "next-size-upgrade-cost": (self.size_upgrade.level + 1) * 1.2 * self.size_upgrade.upgrade_cost,
         }
+
+    def make_new_id(self) -> str:
+        while True:
+            letters = ''.join(random.choices(string.ascii_lowercase, k=64))
+
+            if letters not in self.cards.keys():
+                return letters
 
     def step(self, commands: list[dict]) -> list[dict]:
         results = []
-        if self.money<0:
-            self.defeat==True
-            self.reason=""
-        if self.water<0:
-            self.defeat==True
-            self.reason=""
-        if self.water>1000:
-            self.defeat==True
-            self.reason=""
-        if self.population_satisfaction<0:
-            self.defeat==True
-            self.reason=""
-        if self.power_reliability<0:
-            self.defeat==True
-            self.reason=""
-        if self.emissions>10000:
-            self.defeat==True
-            self.reason=""
-        if self.requests>self.electricity/2:
-            self.defeat==True
-            self.reason=""
 
+        if self.money < 0:
+            self.defeat = True
+            self.reason = "Bankrupt"
+        if self.water < 0:
+            self.defeat = True
+            self.reason = "Over Heated"
+        if self.water > 1000:
+            self.defeat = True
+            self.reason = "Global Drought"
+        if self.population_satisfaction < 0:
+            self.defeat = True
+            self.reason = "Pitch Forks"
+        if self.power_reliability < 0:
+            self.defeat = True
+            self.reason = "Global Blackout"
+        if self.emissions > 10000:
+            self.defeat = True
+            self.reason = "World of smog"
+        if self.energy <= 0:
+            self.defeat = True
+            self.reason = "Power Outage"
 
-
-
-        if self.defeat==True:
-            return
+        if self.defeat == True:
+            return [{
+                "type": "game-over",
+                "message": self.reason
+            }]
 
         # Process commands
         for cmd in commands:
@@ -137,8 +160,9 @@ class GameData:
             self.day += 1
 
         # Update resource values
-        self.money += math.floor(self.requests * 110) - self.electricity_bills
-        self.requests *= 1.001
+        self.money += math.floor(self.requests * 110) - \
+            math.floor(self.electricity_bills)
+        self.requests *= 1.02
         self.energy += (self.energy_generation_rate -
                         self.energy_consumption_rate)
         self.water += (self.water_collection_rate -
@@ -155,97 +179,111 @@ class GameData:
 
         # Spawn cards periodically
         if self.day > 0 and self.day % 5 == 0 and self.tick % 10 == 0:
-            card_rarity = Card.spawn()
+            new_id = self.make_new_id()
+            new_card = Card.spawn()
+            new_card.id = new_id
             results.append({
                 "event": "card_spawned",
-                "rarity": card_rarity.value
+                "payload": new_card.to_dict()
             })
 
         return results
 
-    def receive(self, msg_type: str, payload: dict[str, any]) -> any:
-        match msg_type:
+    def receive(self, data: dict) -> Any:
+        cmd: str = data['type']
+        body: dict = data['payload']
+
+        match cmd:
             case 'buy-electric-upgrade':
-                if self.money < self.energy_upgrade.upgrade_cost:
-                    return {
-                        'type': 'error',
+                if self.money < (self.energy_upgrade.level + 1) * 1.2 * self.energy_upgrade.upgrade_cost:
+                    return 'error', [{
                         'status': {
                             'message': 'not enough money to buy an energy upgrade'
                         }
-                    }
+                    }]
 
                 if self.level_cap <= self.energy_upgrade.level:
-                    return {
-                        'type': 'error',
+                    return 'error', [{
                         'status': {
                             'message': 'level cap can not be exceeded'
                         }
-                    }
+                    }]
 
                 self.money -= self.energy_upgrade.upgrade_cost
                 self.energy_upgrade.level += 1
 
-                return {
-                    'type': 'success',
+                return 'success', [{
                     'status': {
                         'message': f'upgraded energy to level {self.energy_upgrade.level}'
                     }
-                }
+                }]
 
             case 'buy-water-upgrade':
-                if self.money < self.water_upgrade.upgrade_cost:
-                    return {
-                        'type': 'error',
+                if self.money < (self.energy_upgrade.level + 1) * 1.2 * self.water_upgrade.upgrade_cost:
+                    return 'error', [{
                         'status': {
                             'message': 'not enough money to buy an water upgrade'
                         }
-                    }
+                    }]
 
                 if self.level_cap <= self.water_upgrade.level:
-                    return {
-                        'type': 'error',
+                    return 'error', [{
                         'status': {
                             'message': 'level cap can not be exceeded'
                         }
-                    }
+                    }]
 
                 self.money -= self.water_upgrade.upgrade_cost
                 self.water_upgrade.level += 1
 
-                return {
-                    'type': 'success',
+                return 'success', [{
                     'status': {
                         'message': f'upgraded water to level {self.water_upgrade.level}'
                     }
-                }
+                }]
 
             case 'buy-size-upgrade':
-                if self.money < self.size_upgrade.upgrade_cost:
-                    return {
-                        'type': 'error',
+                if self.money < (self.energy_upgrade.level + 1) * 1.2 * self.size_upgrade.upgrade_cost:
+                    return 'error', [{
                         'status': {
                             'message': 'not enough money to buy an size upgrade'
                         }
-                    }
+                    }]
 
                 self.money -= self.size_upgrade.upgrade_cost
                 self.size_upgrade.level += 1
                 self.level_cap += 3
 
-                return {
-                    'type': 'success',
+                return 'success', [{
                     'status': {
                         'message': f'upgraded energy to size {self.size_upgrade.level}',
                     }
-                }
+                }]
+
+            case 'play-card':
+                if body['id'] not in self.cards.keys():
+                    return 'error', [{
+                        'status': {
+                            'message': f'Invalid card, already played or wrong ID'
+                        }
+                    }]
+
+                card = self.cards[body['id']]
+                card.effect(self)
+                del self.cards[body['id']]
+
+                return 'success', [{
+                    'status': {
+                        'message': f'Played card {card.name}'
+                    }
+                }]
 
             case _:
-                return {
-                    'type': 'error',
+                return 'error', [{
                     'status': {
-                        'message': f'no implemented method {msg_type}'
+                        'message': f'no implemented method {cmd}'
                     }
-                }
+                }]
 
 
 class Upgrade:
@@ -266,6 +304,9 @@ def increase_energy_generation(game_data: GameData) -> None:
 def increase_water_collection(game_data: GameData) -> None:
     game_data.water_collection_rate *= 1.05
 
+def add_energy_reliability(game_data: GameData) -> None:
+    game_data.energy_rel
+
 
 def increase_size(game_data: GameData) -> None:
     game_data.size += 1
@@ -280,7 +321,7 @@ def card1_effect(game_data: GameData) -> None:
 
 
 def card2_effect(game_data: GameData) -> None:
-    game_data.money *= 1.04
+    game_data.money = math.floor(game_data.money * 1.04)
     game_data.energy_generation_rate *= 1.08
     game_data.power_reliability -= 4
 
@@ -298,7 +339,7 @@ def card4_effect(game_data: GameData) -> None:
 
 
 def card5_effect(game_data: GameData) -> None:
-    game_data.money *= 1.05
+    game_data.money = math.floor(game_data.money * 1.0)
     game_data.energy_consumption_rate *= 1.04
     game_data.requests *= 1.03
 
@@ -311,19 +352,19 @@ def card6_effect(game_data: GameData) -> None:
 
 def card7_effect(game_data: GameData) -> None:
     game_data.energy_consumption_rate *= 1.06
-    game_data.money *= 1.04
+    game_data.money = math.floor(game_data.money * 1.04)
     game_data.power_reliability -= 2
 
 
 def card8_effect(game_data: GameData) -> None:
     game_data.energy_consumption_rate *= 0.94
-    game_data.money *= 0.98
+    game_data.money = math.floor(game_data.money * 0.98)
     game_data.energy_generation_rate *= 0.97
 
 
 def card9_effect(game_data: GameData) -> None:
     game_data.water_consumption_rate *= 0.94
-    game_data.money *= 0.98
+    game_data.money = math.floor(game_data.money * 0.98)
     game_data.population_satisfaction += 2
 
 
@@ -334,7 +375,7 @@ def card10_effect(game_data: GameData) -> None:
 
 
 def card11_effect(game_data: GameData) -> None:
-    game_data.money *= 1.06
+    game_data.money = math.floor(game_data.money * 1.06)
     game_data.requests *= 1.06
     game_data.energy_consumption_rate *= 1.04
 
@@ -352,7 +393,7 @@ def card13_effect(game_data: GameData) -> None:
 
 
 def card14_effect(game_data: GameData) -> None:
-    game_data.money *= 0.98
+    game_data.money = math.floor(game_data.money * 0.98)
     game_data.population_satisfaction += 3
     game_data.requests *= 0.97
 
@@ -360,14 +401,14 @@ def card14_effect(game_data: GameData) -> None:
 def card15_effect(game_data: GameData) -> None:
     game_data.power_reliability += 5
     game_data.energy_generation_rate *= 0.96
-    game_data.money *= 0.98
+    game_data.money = math.floor(game_data.money * 0.98)
 
 
 def card16_effect(game_data: GameData) -> None:
     game_data.energy_consumption_rate *= 1.10
     game_data.water_consumption_rate *= 1.08
     game_data.emissions += 8
-    game_data.money *= 1.08
+    game_data.money = math.floor(game_data.money * 1.08)
 
 
 def card17_effect(game_data: GameData) -> None:
@@ -385,47 +426,47 @@ def card18_effect(game_data: GameData) -> None:
 def card19_effect(game_data: GameData) -> None:
     game_data.energy_generation_rate *= 1.06
     game_data.emissions -= 3
-    game_data.money *= 0.98
+    game_data.money = math.floor(game_data.money * 0.98)
 
 
 def card20_effect(game_data: GameData) -> None:
     game_data.energy_generation_rate *= 1.07
     game_data.emissions -= 4
-    game_data.money *= 0.97
+    game_data.money = math.floor(game_data.money * 0.97)
 
 
 def card21_effect(game_data: GameData) -> None:
     game_data.electricity_bills *= 1.06
-    game_data.money *= 0.97
+    game_data.money = math.floor(game_data.money * 0.97)
     game_data.population_satisfaction -= 3
 
 
 def card22_effect(game_data: GameData) -> None:
-    game_data.money *= 1.06
+    game_data.money = math.floor(game_data.money * 1.06)
     game_data.requests *= 1.05
     game_data.energy_consumption_rate *= 1.04
 
 
 def card23_effect(game_data: GameData) -> None:
     game_data.population_satisfaction += 5
-    game_data.money *= 1.05
+    game_data.money = math.floor(game_data.money * 1.05)
     game_data.requests *= 1.03
 
 
 def card24_effect(game_data: GameData) -> None:
-    game_data.money *= 1.07
+    game_data.money = math.floor(game_data.money * 1.07)
     game_data.population_satisfaction += 3
     game_data.requests *= 1.03
 
 
 def card25_effect(game_data: GameData) -> None:
-    game_data.money *= 1.05
+    game_data.money = math.floor(game_data.money * 1.05)
     game_data.population_satisfaction += 4
     game_data.requests *= 1.05
 
 
 def card26_effect(game_data: GameData) -> None:
-    game_data.money *= 1.08
+    game_data.money = math.floor(game_data.money * 1.08)
     game_data.population_satisfaction += 5
     game_data.requests *= 1.06
     game_data.energy_consumption_rate *= 1.04
@@ -433,30 +474,30 @@ def card26_effect(game_data: GameData) -> None:
 
 def card27_effect(game_data: GameData) -> None:
     game_data.electricity_bills *= 1.08
-    game_data.money *= 0.95
+    game_data.money = math.floor(game_data.money * 0.95)
     game_data.population_satisfaction -= 4
 
 
 def card28_effect(game_data: GameData) -> None:
     game_data.electricity_bills *= 1.05
-    game_data.money *= 0.97
+    game_data.money = math.floor(game_data.money * 0.97)
     game_data.energy_consumption_rate *= 1.04
 
 
 def card29_effect(game_data: GameData) -> None:
     game_data.electricity_bills *= 1.07
-    game_data.money *= 0.96
+    game_data.money = math.floor(game_data.money * 0.96)
     game_data.population_satisfaction -= 3
 
 
 def card30_effect(game_data: GameData) -> None:
     game_data.electricity_bills *= 1.10
-    game_data.money *= 0.9
+    game_data.money = math.floor(game_data.money * 0.9)
     game_data.population_satisfaction -= 5
 
 
 def card31_effect(game_data: GameData) -> None:
-    game_data.money *= 0.97
+    game_data.money = math.floor(game_data.money * 0.97)
     game_data.requests *= 1.07
     game_data.energy_consumption_rate *= 1.06
 
@@ -476,26 +517,26 @@ def card33_effect(game_data: GameData) -> None:
 
 def card34_effect(game_data: GameData) -> None:
     game_data.population_satisfaction += 5
-    game_data.money *= 0.97
+    game_data.money = math.floor(game_data.money * 0.97)
     game_data.requests *= 1.03
 
 
 def card35_effect(game_data: GameData) -> None:
     game_data.population_satisfaction += 4
     game_data.requests *= 1.03
-    game_data.money *= 0.98
+    game_data.money = math.floor(game_data.money * 0.98)
 
 
 def card36_effect(game_data: GameData) -> None:
     game_data.population_satisfaction += 5
     game_data.requests *= 1.04
-    game_data.money *= 0.97
+    game_data.money = math.floor(game_data.money * 0.97)
 
 
 def card37_effect(game_data: GameData) -> None:
     game_data.population_satisfaction += 3
     game_data.requests *= 0.97
-    game_data.money *= 0.99
+    game_data.money = math.floor(game_data.money * 0.99)
 
 
 def card38_effect(game_data: GameData) -> None:
@@ -512,37 +553,37 @@ def card39_effect(game_data: GameData) -> None:
 
 def card40_effect(game_data: GameData) -> None:
     game_data.population_satisfaction += 4
-    game_data.money *= 0.98
+    game_data.money = math.floor(game_data.money * 0.98)
     game_data.requests *= 1.03
 
 
 def card41_effect(game_data: GameData) -> None:
     game_data.population_satisfaction -= 3
-    game_data.money *= 0.99
+    game_data.money = math.floor(game_data.money * 0.99)
     game_data.requests *= 1.03
 
 
 def card42_effect(game_data: GameData) -> None:
     game_data.energy_generation_rate *= 1.06
     game_data.emissions -= 5
-    game_data.money *= 0.97
+    game_data.money = math.floor(game_data.money * 0.97)
     game_data.energy_consumption_rate *= 1.03
 
 
 def card43_effect(game_data: GameData) -> None:
     game_data.population_satisfaction += 4
     game_data.requests *= 1.03
-    game_data.money *= 0.98
+    game_data.money = math.floor(game_data.money * 0.98)
 
 
 def card44_effect(game_data: GameData) -> None:
-    game_data.money *= 0.96
+    game_data.money = math.floor(game_data.money * 0.96)
     game_data.power_reliability += 5
     game_data.population_satisfaction += 2
 
 
 def card45_effect(game_data: GameData) -> None:
-    game_data.money *= 0.97
+    game_data.money = math.floor(game_data.money * 0.97)
     game_data.population_satisfaction += 5
     game_data.requests *= 0.97
 
@@ -740,9 +781,6 @@ legendary_cards = [
     card30
 ]
 
-print(Card.spawn())
-# endregion cards
-
 
 @dataclass
 class GameState:
@@ -764,5 +802,4 @@ class GameState:
 
 
 def new_game() -> GameState:
-    return GameState(data=GameData(money=100000))
-
+    return GameState(data=GameData(money=100))

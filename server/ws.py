@@ -3,18 +3,22 @@ import asyncio
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from protocol import ProtocolError, wrap, unwrap
 import game
-from game import GameState, GameData, new_game, energy_upgrade, water_upgrade, size_upgrade
+from game import GameState, GameData, new_game
+
+import rich_stdout
 
 import json
 
 # inside game_loop:
-TICK_SECONDS = 1.0
+TICK_SECONDS = 1
+
+terminal = rich_stdout.Terminal()
 
 router = APIRouter()
 
 state: GameState = new_game()
 pending: list[dict] = []          # commands waiting for the next tick
-clients: set[WebSocket] = set()   # currently connected browsers
+clients: set[WebSocket] = set()   # currently connected browser
 
 
 def snapshot_message() -> str:
@@ -38,6 +42,7 @@ async def game_loop(state: GameData) -> None:
         commands = pending.copy()
         pending.clear()
         results = state.step(commands)
+        terminal.table(results)
         for result in results:
             await broadcast(wrap("command_result", result))
         await broadcast(snapshot_message())
@@ -52,13 +57,17 @@ async def ws_endpoint(ws: WebSocket) -> None:
     try:
         while True:
             raw = await ws.receive_text()
+            terminal.info(f'Received {raw=}')
             try:
-                msg_type, payload = unwrap(raw)
-                ans = state.data.receive(msg_type, payload)
-                ws.send_text(json.dumps(ans))
+                if state.data == None:
+                    continue
+
+                data = json.loads(raw)
+                cmd, payload = state.data.receive(data)
+                await ws.send_text(wrap(cmd, payload))
             except ProtocolError:
-                continue                     # ignore malformed messages
-            if msg_type == "command":
+                continue
+            if cmd == "command":
                 pending.append(payload)
     except WebSocketDisconnect:
         pass
