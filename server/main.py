@@ -8,7 +8,7 @@ from fastapi.staticfiles import StaticFiles
 
 # Imports from your server module files
 from game import GameData
-from ws import game_loop, router
+from ws import game_loop, router, state
 
 
 @asynccontextmanager
@@ -17,7 +17,8 @@ async def lifespan(app: FastAPI):
     port = 8000
     print(f"\nServer running! WebSocket link: ws://{host}:{port}/ws\n")
 
-    task = asyncio.create_task(game_loop(GameData()))
+    task = asyncio.create_task(game_loop(state.data))
+    
 
     yield
 
