@@ -1,0 +1,25 @@
+$colour-background-dark: #0b1426 !default;
+$colour-panel-primary: #14263e !default;
+$colour-border-line: #58799d !default;
+
+$colour-text-primary: #edf5ff !default;
+$colour-text-muted: #b5c7dd !default;
+
+$colour-accent-cyan: #4ed3ff !default;
+$colour-accent-mint: #8de6b8 !default;
+$colour-accent-gold: #ffd078 !default;
+$colour-active-cell: #4ed3ff !default;
+
+$colour-shadow-dark: #071222 !default;
+
+$font-family-body:
+	system-ui,
+	-apple-system,
+	BlinkMacSystemFont,
+	'Segoe UI',
+	Roboto,
+	sans-serif !default;
+$font-family-monospace: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Consolas, monospace !default;
+
+$border-thickness-standard: 2px !default;
+$border-thickness-heavy: 4px !default;

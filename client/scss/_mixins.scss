@@ -1,0 +1,52 @@
+@use 'variables';
+
+@mixin pixel-button(
+	$background-colour: variables.$colour-accent-cyan,
+	$text-colour: #081625,
+	$border-colour: variables.$colour-accent-cyan
+) {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	min-height: 44px;
+	max-width: 100%;
+	padding: 10px 14px;
+	border: variables.$border-thickness-standard solid $border-colour;
+	border-radius: 0;
+	box-shadow:
+		0 4px 0 variables.$colour-shadow-dark,
+		inset 0 2px 0 rgba(255, 255, 255, 0.33);
+	background-color: $background-colour;
+	color: $text-colour;
+	font-family: variables.$font-family-body;
+	font-weight: 750;
+	font-size: 13px;
+	line-height: 1.35;
+	cursor: pointer;
+	touch-action: manipulation;
+	transition: transform 80ms steps(2, end);
+
+	&:hover:not(:disabled) {
+		filter: brightness(1.12);
+	}
+
+	&:active:not(:disabled) {
+		transform: translateY(2px);
+		box-shadow: 0 2px 0 variables.$colour-shadow-dark;
+	}
+
+	&:disabled {
+		background-color: #283c53;
+		color: #b5c1d0;
+		border-color: #506881;
+		box-shadow: none;
+		cursor: not-allowed;
+	}
+
+	&:focus-visible {
+		outline: 3px solid variables.$colour-accent-gold;
+		outline-offset: 4px;
+	}
+}

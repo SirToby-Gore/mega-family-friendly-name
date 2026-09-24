@@ -1,5 +1,127 @@
-h1 {
-  font-size: large;
+.shop,
+.data-center-root,
+.stats {
+  box-sizing: border-box;
+  width: min(100%, 340px);
+  min-width: 0;
+  padding: 20px;
+  margin-bottom: 16px;
+  border: 2px solid #58799d;
+  background-color: #14263e;
+  color: #edf5ff;
+  box-shadow: 4px 4px 0 #0b1426;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  color-scheme: dark;
+}
+.shop *,
+.shop *::before,
+.shop *::after,
+.data-center-root *,
+.data-center-root *::before,
+.data-center-root *::after,
+.stats *,
+.stats *::before,
+.stats *::after {
+  box-sizing: border-box;
+}
+
+.shop-body {
+  display: grid;
+  gap: 14px;
+}
+.shop-body[open] {
+  padding-top: 10px;
+}
+
+.shop-upgrade {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border: 2px solid rgb(32.4390243902, 61.6341463415, 100.5609756098);
+  background-color: rgb(15.0243902439, 28.5463414634, 46.5756097561);
+}
+.shop-upgrade .level-indicator {
+  display: grid;
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+  gap: 4px;
+  width: 100%;
+}
+.shop-upgrade .level-indicator .cell {
+  height: 12px;
+  border: 1px solid #58799d;
+  background-color: #0b1426;
+  transition: background-color 150ms ease;
+}
+.shop-upgrade .level-indicator .cell.active {
+  background-color: #4ed3ff;
+  border-color: #4ed3ff;
+  box-shadow: 0 0 4px rgba(78, 211, 255, 0.5);
+}
+.shop-upgrade .button-container {
+  display: flex;
+  justify-content: flex-end;
+}
+.shop-upgrade .button-container button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  max-width: 100%;
+  padding: 10px 14px;
+  border: 2px solid #8de6b8;
+  border-radius: 0;
+  box-shadow: 0 4px 0 #071222, inset 0 2px 0 rgba(255, 255, 255, 0.33);
+  background-color: #8de6b8;
+  color: #081625;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-weight: 750;
+  font-size: 13px;
+  line-height: 1.35;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform 80ms steps(2, end);
+}
+.shop-upgrade .button-container button:hover:not(:disabled) {
+  filter: brightness(1.12);
+}
+.shop-upgrade .button-container button:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: 0 2px 0 #071222;
+}
+.shop-upgrade .button-container button:disabled {
+  background-color: #283c53;
+  color: #b5c1d0;
+  border-color: #506881;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+.shop-upgrade .button-container button:focus-visible {
+  outline: 3px solid #ffd078;
+  outline-offset: 4px;
+}
+.shop-upgrade .button-container button {
+  width: 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shop-upgrade .button-container button:active:not(:disabled) {
+    transform: none !important;
+  }
+}
+body {
+  background-color: #0b1426;
+  color: #edf5ff;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  padding: 24px;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 /*# sourceMappingURL=styles.css.map */

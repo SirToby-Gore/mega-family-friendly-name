@@ -1,0 +1,83 @@
+@use "sass:color";
+@use 'variables';
+@use 'mixins';
+
+.shop,
+.data-center-root,
+.stats {
+	box-sizing: border-box;
+	width: min(100%, 340px);
+	min-width: 0;
+	padding: 20px;
+	margin-bottom: 16px;
+	border: variables.$border-thickness-standard solid variables.$colour-border-line;
+	background-color: variables.$colour-panel-primary;
+	color: variables.$colour-text-primary;
+	box-shadow: 4px 4px 0 variables.$colour-background-dark;
+	font-family: variables.$font-family-body;
+	font-size: 14px;
+	line-height: 1.5;
+	color-scheme: dark;
+
+	*,
+	*::before,
+	*::after {
+		box-sizing: border-box;
+	}
+}
+
+// Shop Container Body
+.shop-body {
+	display: grid;
+	gap: 14px;
+
+	&[open] {
+		padding-top: 10px;
+	}
+}
+
+.shop-upgrade {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	padding: 12px;
+	border: variables.$border-thickness-standard solid color.adjust(variables.$colour-panel-primary, $lightness: 10%);
+	background-color: color.adjust(variables.$colour-panel-primary, $lightness: -4%);
+
+	.level-indicator {
+		display: grid;
+		grid-template-columns: repeat(10, minmax(0, 1fr));
+		gap: 4px;
+		width: 100%;
+
+		.cell {
+			height: 12px;
+			border: 1px solid variables.$colour-border-line;
+			background-color: variables.$colour-background-dark;
+			transition: background-color 150ms ease;
+
+			&.active {
+				background-color: variables.$colour-active-cell;
+				border-color: variables.$colour-accent-cyan;
+				box-shadow: 0 0 4px rgba(variables.$colour-accent-cyan, 0.5);
+			}
+		}
+	}
+
+	.button-container {
+		display: flex;
+		justify-content: flex-end;
+
+		button {
+			@include mixins.pixel-button(variables.$colour-accent-mint, #081625, variables.$colour-accent-mint);
+			width: 100%;
+		}
+	}
+}
+
+// Accessibility
+@media (prefers-reduced-motion: reduce) {
+	.shop-upgrade .button-container button:active:not(:disabled) {
+		transform: none !important;
+	}
+}

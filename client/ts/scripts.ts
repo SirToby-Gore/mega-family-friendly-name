@@ -1,7 +1,62 @@
 interface ServerResponse {
-	request: string;
+	type: string;
+	state: Map<string, any>;
 	'status-code': number;
-	message?: string;
+}
+
+class ShopUpgrade {
+	private app: MegaFamilyFriendlyNameClient;
+
+	private routeElement: HTMLDivElement;
+	private levelIndicator: HTMLDivElement = document.createElement('div');
+	private buttonContainer: HTMLDivElement = document.createElement('div');
+	private buyNewLevelButton: HTMLButtonElement = document.createElement('button');
+
+	private name: string;
+	private level: number = 0;
+	static maxLevel: number = 10;
+
+	constructor(app: MegaFamilyFriendlyNameClient, routeElement: HTMLDivElement, name: string) {
+		this.app = app;
+
+		this.routeElement = routeElement;
+		this.name = name;
+
+		this.routeElement.classList.add('shop-upgrade');
+
+		this.routeElement.appendChild(this.levelIndicator);
+		this.levelIndicator.classList.add('level-indicator');
+
+		this.routeElement.appendChild(this.buttonContainer);
+		this.buttonContainer.classList.add('button-container');
+
+		this.buttonContainer.appendChild(this.buyNewLevelButton);
+		this.buttonContainer.classList.add('new-level-button');
+		this.buyNewLevelButton.onclick = this.buyNewLevel;
+
+		for (let i = 0; i < ShopUpgrade.maxLevel; i++) {
+			const newCell = document.createElement('div');
+			newCell.classList.add('cell');
+
+			this.levelIndicator.appendChild(newCell);
+		}
+	}
+
+	buyNewLevel(event: Event) {
+		console.log('Buying new level...');
+	}
+
+	updateChildren() {
+		let i = this.level;
+
+		for (const cell of this.levelIndicator.children) {
+			if (i <= 0) {
+				break;
+			}
+
+			cell.classList.add('active');
+		}
+	}
 }
 
 class MegaFamilyFriendlyNameClient {
@@ -9,9 +64,13 @@ class MegaFamilyFriendlyNameClient {
 
 	// UI Cache references
 	private root: HTMLElement = document.createElement('div');
+
 	private shopRoot: HTMLDivElement = document.createElement('div');
 	private shopBody: HTMLDetailsElement = document.createElement('details');
+	private shopUpgrades: Array<ShopUpgrade> = [];
+
 	private dataCenterRoot: HTMLDivElement = document.createElement('div');
+
 	private statsRoot: HTMLDivElement = document.createElement('div');
 
 	constructor() {
@@ -20,10 +79,16 @@ class MegaFamilyFriendlyNameClient {
 		document.body.append(this.root);
 
 		this.root.appendChild(this.shopRoot);
-		this.root.appendChild(this.dataCenterRoot);
-		this.root.appendChild(this.statsRoot);
+		this.shopRoot.classList.add('shop');
 
 		this.shopRoot.appendChild(this.shopBody);
+		this.shopBody.classList.add('shop-body');
+
+		this.root.appendChild(this.dataCenterRoot);
+		this.dataCenterRoot.classList.add('data-center-root');
+
+		this.root.appendChild(this.statsRoot);
+		this.statsRoot.classList.add('stats');
 
 		this.connectToServer();
 	}
@@ -40,6 +105,7 @@ class MegaFamilyFriendlyNameClient {
 		this.socket.onmessage = (event) => {
 			try {
 				const response: ServerResponse = jsonDecode(event.data);
+				response['status-code'] = 200;
 				this.handleServerMessage(response);
 			} catch (err) {
 				console.error('Failed to parse incoming transmission:', err);
@@ -64,12 +130,12 @@ class MegaFamilyFriendlyNameClient {
 		console.table(res);
 
 		if (res['status-code'] >= 400) {
-			alert(res.message || 'An error occurred on the server.');
+			alert(res.type || 'An error occurred on the server.');
 			return;
 		}
 
 		switch (
-			res.request
+			res.type
 			// todo: put methods here
 		) {
 		}
