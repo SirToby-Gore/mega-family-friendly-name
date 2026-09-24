@@ -75,6 +75,8 @@ class GameData:
                                       cost=5000, effect=increase_energy_generation)
         self.water_upgrade = Upgrade(name="Water Collector", description="Increases water collection rate by 5%.",
                                      cost=5000, effect=increase_water_collection)
+        self.energy_reliability_upgrade = Upgrade(
+            name="Energy_Reliability", description="increase energy reliability by 10", cost=5000, effect=add_energy_reliability)
         self.size_upgrade = Upgrade(name="Size", description="Increases the size of your settlement by 1.",
                                     cost=10000, effect=increase_size)
         self.cards: dict[str, Card] = {}
@@ -164,9 +166,9 @@ class GameData:
             math.floor(self.electricity_bills)
         self.requests *= 1.02
         self.energy += (self.energy_generation_rate -
-                        self.energy_consumption_rate)
+                        self.energy_consumption_rate) / (self.energy_upgrade.level + 1)
         self.water += (self.water_collection_rate -
-                       self.water_consumption_rate - self.emissions)
+                       self.water_consumption_rate - self.emissions) / (self.water_upgrade.level + 1)
         self.energy_consumption_rate += self.requests * 0.01
         self.water_consumption_rate += self.requests * 0.01
         self.electricity_bills = self.energy_consumption_rate * 2
@@ -209,7 +211,8 @@ class GameData:
                         }
                     }]
 
-                self.money -= self.energy_upgrade.upgrade_cost
+                self.money -= math.floor((self.energy_upgrade.level+1)
+                                         * self.energy_upgrade.upgrade_cost * 1.2)
                 self.energy_upgrade.level += 1
 
                 return 'success', [{
@@ -219,7 +222,7 @@ class GameData:
                 }]
 
             case 'buy-water-upgrade':
-                if self.money < (self.energy_upgrade.level + 1) * 1.2 * self.water_upgrade.upgrade_cost:
+                if self.money < (self.water_upgrade.level + 1) * 1.2 * self.water_upgrade.upgrade_cost:
                     return 'error', [{
                         'status': {
                             'message': 'not enough money to buy an water upgrade'
@@ -233,7 +236,8 @@ class GameData:
                         }
                     }]
 
-                self.money -= self.water_upgrade.upgrade_cost
+                self.money -= math.floor((self.water_upgrade.level+1)
+                                         * self.water_upgrade.upgrade_cost * 1.2)
                 self.water_upgrade.level += 1
 
                 return 'success', [{
@@ -241,6 +245,24 @@ class GameData:
                         'message': f'upgraded water to level {self.water_upgrade.level}'
                     }
                 }]
+
+            case 'buy-reliability-upgrade':
+                if self.money < (self.energy_reliability_upgrade.level + 1) * 1.2 * self.energy_reliability_upgrade.upgrade_cost:
+                    return 'error', [{
+                        'status': {
+                            'message': 'not enough money to buy a energy reliability upgrade'
+                        }
+                    }]
+
+                self.money -= math.floor((self.water_upgrade.level+1)
+                                         * self.water_upgrade.upgrade_cost * 1.2)
+
+                return 'success', [{
+                                    'status': {
+                                        'message': f'upgraded water to level {self.water_upgrade.level}'
+                                    }
+                                }]
+                
 
             case 'buy-size-upgrade':
                 if self.money < (self.energy_upgrade.level + 1) * 1.2 * self.size_upgrade.upgrade_cost:
@@ -250,7 +272,8 @@ class GameData:
                         }
                     }]
 
-                self.money -= self.size_upgrade.upgrade_cost
+                self.money -= math.floor((self.size_upgrade.level+1)
+                                         * self.size_upgrade.upgrade_cost * 1.2)
                 self.size_upgrade.level += 1
                 self.level_cap += 3
 
@@ -304,8 +327,9 @@ def increase_energy_generation(game_data: GameData) -> None:
 def increase_water_collection(game_data: GameData) -> None:
     game_data.water_collection_rate *= 1.05
 
+
 def add_energy_reliability(game_data: GameData) -> None:
-    game_data.energy_rel
+    game_data.power_reliability += 10
 
 
 def increase_size(game_data: GameData) -> None:
