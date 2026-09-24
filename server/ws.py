@@ -5,6 +5,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from protocol import ProtocolError, wrap, unwrap
 from game import GameState, GameData, new_game
 
+# inside game_loop:
 TICK_SECONDS = 1.0
 
 router = APIRouter()
@@ -31,7 +32,7 @@ async def game_loop(state: GameData) -> None:
         await asyncio.sleep(TICK_SECONDS)
         commands = pending.copy()
         pending.clear()
-        state, results = state.step(state, commands)
+        results = state.step(commands)
         for result in results:
             await broadcast(wrap("command_result", result))
         await broadcast(snapshot_message())
@@ -41,7 +42,8 @@ async def game_loop(state: GameData) -> None:
 async def ws_endpoint(ws: WebSocket) -> None:
     await ws.accept()
     clients.add(ws)
-    await ws.send_text(snapshot_message())   # new/reconnecting clients catch up immediately
+    # new/reconnecting clients catch up immediately
+    await ws.send_text(snapshot_message())
     try:
         while True:
             raw = await ws.receive_text()

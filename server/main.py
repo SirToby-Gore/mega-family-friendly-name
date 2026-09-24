@@ -1,24 +1,14 @@
 import asyncio
-# import aiofiles
-import websockets
-import api
-from api.protocol import ProtocolError, unwrap, wrap
-from api.ws import game_loop, router
-import models
-from models.game import GameState, GameData
-import sim
-import random
-import math
-import rich_stdout
 import os
-
-from fastapi import FastAPI, Response
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
-
 from contextlib import asynccontextmanager
 
-terminal = rich_stdout.Terminal()
+from fastapi import FastAPI, Response
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
+
+# Imports from your server module files
+from game import GameData
+from ws import game_loop, router
 
 
 @asynccontextmanager
@@ -31,19 +21,14 @@ async def lifespan(app: FastAPI):
 
     yield
 
-    # Stop ticking on shutdown
     task.cancel()
 
-app = FastAPI(lifespan=lifespan)
-app.include_router(router)
 
 app = FastAPI(lifespan=lifespan)
 app.include_router(router)
 
-# Resolves BASE_DIR to the root 'src/' folder
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
-# Mount static asset endpoints
 app.mount(
     "/js",
     StaticFiles(directory=os.path.join(BASE_DIR, "client", "js")),
@@ -73,5 +58,5 @@ async def serve_index():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app",
-                host="127.0.0.1", port=8000, reload=True)
+
+    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
