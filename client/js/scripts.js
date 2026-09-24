@@ -50,7 +50,7 @@ var MegaFamilyFriendlyNameClient = /** @class */ (function () {
         this.socket.send(JSON.stringify(__assign({ request: request }, payload)));
     };
     MegaFamilyFriendlyNameClient.prototype.handleServerMessage = function (res) {
-        console.log(res);
+        console.table(res);
         if (res['status-code'] >= 400) {
             alert(res.message || 'An error occurred on the server.');
             return;

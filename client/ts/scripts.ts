@@ -61,8 +61,8 @@ class MegaFamilyFriendlyNameClient {
 	}
 
 	private handleServerMessage(res: ServerResponse): void {
-		console.log(res);
-		
+		console.table(res);
+
 		if (res['status-code'] >= 400) {
 			alert(res.message || 'An error occurred on the server.');
 			return;

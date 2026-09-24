@@ -2,12 +2,12 @@
 
 from dataclasses import replace
 
-from models.game import GameState
+from models.game import GameData
 
 INCOME_PER_TICK = 1  # credits per tick; placeholder until balance moves to data/*.json
 
 
-def step(state: GameState, commands: list[dict]) -> tuple[GameState, list[dict]]:
+def step(state: GameData, commands: list[dict]) -> tuple[GameData, list[dict]]:
     """results = [
         {"id": cmd.get("id"), "ok": False, "reason": "UNKNOWN_COMMAND"}
         for cmd in commands
