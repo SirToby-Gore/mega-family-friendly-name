@@ -30,10 +30,12 @@
 		reason?: string;
 		'energy-generation-level': number;
 		'water-collection-level': number;
+		'energy-reliability-level'?: number;
 		'level-cap': number;
 		'next-energy-upgrade-cost'?: number;
 		'next-water-upgrade-cost'?: number;
 		'next-size-upgrade-cost'?: number;
+		'next-reliability-upgrade-cost'?: number;
 		cards?: Record<string, CardData> | CardData[];
 	}
 
@@ -474,6 +476,21 @@
 				createUpgradeHandler('buy-water-upgrade'),
 			);
 
+			const reliabilityLevel = state['energy-reliability-level'] ?? 0;
+			const reliabilityCost = state['next-reliability-upgrade-cost'];
+			const canAffordReliability = reliabilityCost !== undefined ? state.money >= reliabilityCost : true;
+			const reliabilityDisabled =
+				this.isAwaitingTick || state.defeat || reliabilityLevel >= cap || !canAffordReliability;
+
+			const reliabilityCard = ComponentFactory.createUpgradeCard(
+				'Grid Reliability',
+				reliabilityLevel,
+				cap,
+				reliabilityCost,
+				reliabilityDisabled,
+				createUpgradeHandler('buy-reliability-upgrade'),
+			);
+
 			const sizeCost = state['next-size-upgrade-cost'];
 			const canAffordSize = sizeCost !== undefined ? state.money >= sizeCost : true;
 			const sizeDisabled = this.isAwaitingTick || state.defeat || state.size >= cap || !canAffordSize;
@@ -489,6 +506,7 @@
 
 			this.shopBodyPanel.appendChild(energyCard);
 			this.shopBodyPanel.appendChild(waterCard);
+			this.shopBodyPanel.appendChild(reliabilityCard);
 			this.shopBodyPanel.appendChild(sizeCard);
 
 			// 4. Render Active Cards Hand

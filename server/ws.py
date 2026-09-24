@@ -41,11 +41,19 @@ async def game_loop(state: GameData) -> None:
         await asyncio.sleep(TICK_SECONDS)
         commands = pending.copy()
         pending.clear()
-        results = state.step(commands)
-        terminal.table(results)
-        for result in results:
-            await broadcast(wrap("command_result", result))
-        await broadcast(snapshot_message())
+        try:
+            results = state.step(commands)
+            terminal.table(results)
+            for result in results:
+                await broadcast(wrap("event", result))
+            await broadcast(snapshot_message())
+        except Exception as exc:
+            terminal.error(f"Tick {state.tick} failed: {exc!r}")
+            continue
+
+        if state.defeat:
+            terminal.info(f"Game over: {state.reason}")
+            return
 
 
 @router.websocket("/ws")
@@ -69,9 +77,12 @@ async def ws_endpoint(ws: WebSocket) -> None:
             data.setdefault("payload", {})
 
             try:
+                if state.data == None:
+                    continue
                 status, details = state.data.receive(data)
             except (KeyError, TypeError) as exc:   # e.g. play-card sent without an id
-                status, details = "error", [{"status": {"message": f"Bad command: {exc}"}}]
+                status, details = "error", [
+                    {"status": {"message": f"Bad command: {exc}"}}]
 
             await ws.send_text(wrap("command_result", {
                 "command": data["type"],
