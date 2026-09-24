@@ -2,10 +2,8 @@
 import asyncio
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
-
-from api.protocol import ProtocolError, unwrap, wrap
-from models.game import GameState, new_game
-from sim.step import step
+from protocol import ProtocolError, wrap, unwrap
+from game import GameState, GameData, new_game
 
 TICK_SECONDS = 1.0
 
@@ -28,12 +26,12 @@ async def broadcast(raw: str) -> None:
             clients.discard(ws)   # a dead client must not stop the loop
 
 
-async def game_loop(state) -> None:
+async def game_loop(state: GameData) -> None:
     while True:
         await asyncio.sleep(TICK_SECONDS)
         commands = pending.copy()
         pending.clear()
-        state, results = step(state, commands)
+        state, results = state.step(state, commands)
         for result in results:
             await broadcast(wrap("command_result", result))
         await broadcast(snapshot_message())
@@ -43,8 +41,7 @@ async def game_loop(state) -> None:
 async def ws_endpoint(ws: WebSocket) -> None:
     await ws.accept()
     clients.add(ws)
-    # new/reconnecting clients catch up immediately
-    await ws.send_text(snapshot_message())
+    await ws.send_text(snapshot_message())   # new/reconnecting clients catch up immediately
     try:
         while True:
             raw = await ws.receive_text()
