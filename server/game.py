@@ -58,28 +58,30 @@ class GameData:
         self.water_collection_rate: float = 1.0
         self.power_reliability: float = 100.0
         self.size: int = 1
+        self.level_cap = self.size*10
         self.emissions: float = 0.0
-        self.level_cap: int = 10
         self.defeat: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         return {
-            "tick": self.tick,
             "day": self.day,
+            "tick": self.tick,
             "money": self.money,
-            "water": self.water,
-            "energy": self.energy,
-            "requests": self.requests,
-            "population_satisfaction": self.population_satisfaction,
-            "energy_generation_rate": self.energy_generation_rate,
-            "energy_consumption_rate": self.energy_consumption_rate,
-            "water_consumption_rate": self.water_consumption_rate,
-            "water_collection_rate": self.water_collection_rate,
-            "power_reliability": self.power_reliability,
+            "water": round(self.water,2),
+            "energy": round(self.energy,2),
+            "requests": round(self.requests,2),
+            "population-satisfaction": round(self.population_satisfaction,2),
+            "energy-generation-rate": round(self.energy_generation_rate,2),
+            "energy-consumption-rate": round(self.energy_consumption_rate,2),
+            "water-consumption-rate": round(self.water_consumption_rate,2),
+            "water-collection-rate": round(self.water_collection_rate,2),
+            "power-reliability": round(self.power_reliability,2),
             "size": self.size,
-            "emissions": self.emissions,
-            "level_cap": self.level_cap,
+            "emissions": round(self.emissions),
             "defeat": self.defeat,
+            "energy-generation-level": energy_upgrade.level,
+            "water-collection-level": water_upgrade.level,
+            "level-cap": self.level_cap
         }
 
     def step(self, commands: list[dict]) -> list[dict]:
@@ -104,11 +106,10 @@ class GameData:
         self.money += math.floor(self.requests * 110)
         self.requests *= 1.001
         self.energy += (self.energy_generation_rate - self.energy_consumption_rate)
-        self.water += (self.water_collection_rate -self.water_consumption_rate - self.emissions)
+        self.water += (self.water_collection_rate - self.water_consumption_rate - self.emissions)
         self.energy_consumption_rate += self.requests * 0.01
         self.water_consumption_rate += self.requests * 0.01
         self.power_reliability = max(0.0, self.power_reliability - (self.energy_consumption_rate * 0.01))
-        self.level_cap = self.size * 10
 
         # Check loss condition
         if self.power_reliability <= 0 or self.water <= 0:
@@ -148,6 +149,7 @@ class Upgrade:
         if self == size_upgrade and (energy_upgrade.level < level_cap or water_upgrade.level < level_cap):
             return False
 
+        # Remove the cost
         game_data.money -= self.upgrade_cost
 
         # Apply the upgrade
@@ -159,17 +161,18 @@ class Upgrade:
 def increase_energy_generation(game_data: GameData) -> None:
     game_data.energy_generation_rate *= 1.05
 
+
 def increase_water_collection(game_data: GameData) -> None:
     game_data.water_collection_rate *= 1.05
 
+
 def increase_size(game_data: GameData) -> None:
     game_data.size += 1
-    
-
 
 energy_upgrade = Upgrade(name="Power Plant", description="Increases energy generation rate by 5%.", cost=5000, effect=increase_energy_generation)
 water_upgrade = Upgrade(name="Water Collector", description="Increases water collection rate by 5%.", cost=5000, effect=increase_water_collection)
 size_upgrade = Upgrade(name="Size", description="Increases the size of your settlement by 1.", cost=10000, effect=increase_size)
+
 
 @dataclass
 class GameState:

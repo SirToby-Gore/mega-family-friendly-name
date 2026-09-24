@@ -19,7 +19,6 @@ async def lifespan(app: FastAPI):
 
     task = asyncio.create_task(game_loop(state.data))
     
-
     yield
 
     task.cancel()

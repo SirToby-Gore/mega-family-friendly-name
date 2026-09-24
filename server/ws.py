@@ -1,9 +1,9 @@
-"""WebSocket endpoint and the tick loop that pushes snapshots to clients."""
 import asyncio
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from protocol import ProtocolError, wrap, unwrap
-from game import GameState, GameData, new_game
+import game
+from game import GameState, GameData, new_game, energy_upgrade, water_upgrade, size_upgrade
 
 # inside game_loop:
 TICK_SECONDS = 1.0
@@ -29,6 +29,9 @@ async def broadcast(raw: str) -> None:
 
 async def game_loop(state: GameData) -> None:
     while True:
+        while not clients:
+            await asyncio.sleep(0.1)
+
         await asyncio.sleep(TICK_SECONDS)
         commands = pending.copy()
         pending.clear()
