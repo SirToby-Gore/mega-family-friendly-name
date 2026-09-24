@@ -59,6 +59,7 @@ class GameData:
         self.power_reliability: float = 100.0
         self.size: int = 1
         self.emissions: float = 0.0
+        self.level_cap: int = 10
         self.defeat: bool = False
 
     def to_dict(self) -> dict[str, Any]:
@@ -77,6 +78,7 @@ class GameData:
             "power_reliability": self.power_reliability,
             "size": self.size,
             "emissions": self.emissions,
+            "level_cap": self.level_cap,
             "defeat": self.defeat,
         }
 
@@ -101,13 +103,12 @@ class GameData:
         # Update resource values
         self.money += math.floor(self.requests * 110)
         self.requests *= 1.001
-        self.energy += self.energy_generation_rate - self.energy_consumption_rate
-        self.water += self.water_collection_rate - \
-            self.water_consumption_rate - self.emissions
+        self.energy += (self.energy_generation_rate - self.energy_consumption_rate)
+        self.water += (self.water_collection_rate -self.water_consumption_rate - self.emissions)
         self.energy_consumption_rate += self.requests * 0.01
         self.water_consumption_rate += self.requests * 0.01
-        self.power_reliability = max(
-            0.0, self.power_reliability - (self.energy_consumption_rate * 0.01))
+        self.power_reliability = max(0.0, self.power_reliability - (self.energy_consumption_rate * 0.01))
+        self.level_cap = self.size * 10
 
         # Check loss condition
         if self.power_reliability <= 0 or self.water <= 0:
@@ -123,6 +124,52 @@ class GameData:
 
         return results
 
+
+class Upgrade:
+    def __init__(self, name: str, description: str, cost: int, effect: Callable[[GameData], None]):
+        self.upgrade_name: str = name
+        self.description: str = description
+        self.upgrade_cost: int = cost
+        self.upgrade_effect: Callable[[GameData], None] = effect
+        self.level: int = 0
+
+    def purchase(self, game_data: GameData) -> bool:
+        global level_cap
+
+        # Check if the player can afford the upgrade
+        if game_data.money < self.upgrade_cost:
+            return False
+
+        # Check level cap for normal upgrades
+        if self != size_upgrade and self.level >= level_cap:
+            return False
+
+        # Check if size can be upgraded
+        if self == size_upgrade and (energy_upgrade.level < level_cap or water_upgrade.level < level_cap):
+            return False
+
+        game_data.money -= self.upgrade_cost
+
+        # Apply the upgrade
+        self.upgrade_effect(game_data)
+        self.level += 1
+        return True
+
+
+def increase_energy_generation(game_data: GameData) -> None:
+    game_data.energy_generation_rate *= 1.05
+
+def increase_water_collection(game_data: GameData) -> None:
+    game_data.water_collection_rate *= 1.05
+
+def increase_size(game_data: GameData) -> None:
+    game_data.size += 1
+    
+
+
+energy_upgrade = Upgrade(name="Power Plant", description="Increases energy generation rate by 5%.", cost=5000, effect=increase_energy_generation)
+water_upgrade = Upgrade(name="Water Collector", description="Increases water collection rate by 5%.", cost=5000, effect=increase_water_collection)
+size_upgrade = Upgrade(name="Size", description="Increases the size of your settlement by 1.", cost=10000, effect=increase_size)
 
 @dataclass
 class GameState:
