@@ -1,7 +1,7 @@
 import asyncio
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
-from protocol import ProtocolError, wrap, unwrap
+from protocol import wrap
 import game
 from game import GameState, GameData, new_game
 
@@ -59,16 +59,25 @@ async def ws_endpoint(ws: WebSocket) -> None:
             raw = await ws.receive_text()
             terminal.info(f'Received {raw=}')
             try:
-                if state.data == None:
-                    continue
-
                 data = json.loads(raw)
-                cmd, payload = state.data.receive(data)
-                await ws.send_text(wrap(cmd, payload))
-            except ProtocolError:
+            except json.JSONDecodeError:
+                terminal.info("Ignored message: not valid JSON")
                 continue
-            if cmd == "command":
-                pending.append(payload)
+            if not isinstance(data, dict) or not isinstance(data.get("type"), str):
+                terminal.info("Ignored message: missing 'type'")
+                continue
+            data.setdefault("payload", {})
+
+            try:
+                status, details = state.data.receive(data)
+            except (KeyError, TypeError) as exc:   # e.g. play-card sent without an id
+                status, details = "error", [{"status": {"message": f"Bad command: {exc}"}}]
+
+            await ws.send_text(wrap("command_result", {
+                "command": data["type"],
+                "ok": status == "success",
+                "message": details[0]["status"]["message"],
+            }))
     except WebSocketDisconnect:
         pass
     finally:
