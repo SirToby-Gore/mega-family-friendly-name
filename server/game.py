@@ -11,6 +11,7 @@ terminal = rich_stdout.Terminal()
 STATE_VERSION = 1
 
 
+
 class CardRarity(Enum):
     COMMON = "common"
     UNCOMMON = "uncommon"
@@ -56,13 +57,13 @@ class GameData:
         self.tick: int = 0
         self.day: int = 0
         self.money: int = money
-        self.water: float = 100.0
+        self.water: float = 80.0
         self.energy: float = 100.0
         self.requests: float = 1.0
         self.population_satisfaction: float = 100.0
         self.electricity_bills: float = 1.0
         self.energy_generation_rate: float = 1.0
-        self.energy_consumption_rate: float = 0.5
+        self.energy_consumption_rate: float = 0.9
         self.water_consumption_rate: float = 1.0
         self.water_collection_rate: float = 1.0
         self.power_reliability: float = 100.0
@@ -71,12 +72,12 @@ class GameData:
         self.reason = str = ""
         self.emissions: float = 0.0
         self.defeat: bool = False
-        self.energy_upgrade = Upgrade(name="Power Plant", description="Increases energy generation rate by 5%.",
-                                      cost=5000, effect=increase_energy_generation)
-        self.water_upgrade = Upgrade(name="Water Collector", description="Increases water collection rate by 5%.",
-                                     cost=5000, effect=increase_water_collection)
+        self.energy_upgrade = Upgrade(name="Power Plant", description="Increases energy generation rate by 25%.",
+                                      cost=2000, effect=increase_energy_generation)
+        self.water_upgrade = Upgrade(name="Water Collector", description="Increases water collection rate by 25%.",
+                                     cost=2000, effect=increase_water_collection)
         self.energy_reliability_upgrade = Upgrade(
-            name="Energy_Reliability", description="increase energy reliability by 10", cost=5000, effect=add_energy_reliability)
+            name="Energy_Reliability", description="increase energy reliability by 25", cost=4000, effect=add_energy_reliability)
         self.size_upgrade = Upgrade(name="Size", description="Increases the size of your settlement by 1.",
                                     cost=10000, effect=increase_size)
         self.cards: dict[str, Card] = {}
@@ -124,13 +125,13 @@ class GameData:
         if self.water < 0:
             self.defeat = True
             self.reason = "Over Heated"
-        if self.water > 1000:
+        if self.water > 1000.0:
             self.defeat = True
             self.reason = "Global Drought"
         if self.population_satisfaction < 0:
             self.defeat = True
             self.reason = "Pitch Forks"
-        if self.power_reliability < 0:
+        if self.power_reliability <= 0:
             self.defeat = True
             self.reason = "Global Blackout"
         if self.emissions > 10000:
@@ -161,19 +162,24 @@ class GameData:
         if self.tick % 10 == 0:
             self.day += 1
 
-        # Update resource values
-        self.money += math.floor(self.requests * 110) - \
+        # Update resource values.
+        # Consumption grows at the same rate as demand. It is scaled rather than
+        # recalculated, so card effects on consumption rates carry forward.
+        self.requests *= 1.0025
+        self.energy_consumption_rate *= 1.0025
+        self.water_consumption_rate *= 1.0025
+        self.emissions = max(0.0, self.emissions)
+
+        self.electricity_bills = self.energy_consumption_rate * 2
+        self.money += math.floor(self.requests * 150) - \
             math.floor(self.electricity_bills)
-        self.requests *= 1.02
         self.energy += (self.energy_generation_rate -
                         self.energy_consumption_rate)
         self.water += (self.water_collection_rate -
-                       self.water_consumption_rate - self.emissions)
-        self.energy_consumption_rate += self.requests * 0.01
-        self.water_consumption_rate += self.requests * 0.01
-        self.electricity_bills = self.energy_consumption_rate * 2
+                       self.water_consumption_rate -
+                       self.emissions * 0.1)
         self.power_reliability = max(
-            0.0, self.power_reliability - (self.energy_consumption_rate * 0.01))
+            0.0, self.power_reliability - self.energy_consumption_rate * 0.07)
 
 
         # Spawn cards periodically
@@ -257,6 +263,7 @@ class GameData:
                 self.money -= math.floor((self.energy_reliability_upgrade.level+1)
                                          * self.energy_reliability_upgrade.upgrade_cost * 1.2)
                 add_energy_reliability(self)
+                self.energy_reliability_upgrade.level += 1
 
 
                 return 'success', [{
@@ -266,7 +273,7 @@ class GameData:
                 }]
 
             case 'buy-size-upgrade':
-                if self.money < (self.energy_upgrade.level + 1) * 1.2 * self.size_upgrade.upgrade_cost:
+                if self.money < (self.size_upgrade.level + 1) * 1.2 * self.size_upgrade.upgrade_cost:
                     return 'error', [{
                         'status': {
                             'message': 'not enough money to buy an size upgrade'
@@ -324,15 +331,16 @@ class Upgrade:
 
 
 def increase_energy_generation(game_data: GameData) -> None:
-    game_data.energy_generation_rate *= 1.05
+    game_data.energy_generation_rate *= 1.25
 
 
 def increase_water_collection(game_data: GameData) -> None:
-    game_data.water_collection_rate *= 1.05
+    game_data.water_collection_rate *= 1.25
 
 
 def add_energy_reliability(game_data: GameData) -> None:
-    game_data.power_reliability += 10
+    game_data.power_reliability = min(
+        100.0, game_data.power_reliability + 25)
 
 
 def increase_size(game_data: GameData) -> None:
